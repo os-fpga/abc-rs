@@ -516,6 +516,8 @@ void Gia_ManPrintMappingStats( Gia_Man_t * p, char * pDumpFile )
 #else
     Abc_Print( 1, "Mapping (K=%d)  :  ", nLutSize );
     Abc_Print( 1, "%slut =%7d%s  ",  "\033[1;33m", nLuts,    "\033[0m" );  // yellow
+    if ( nMuxF )
+        Abc_Print( 1, "%smuxF =%7d%s  ",  "\033[1;33m", nMuxF,    "\033[0m" );  // yellow
     Abc_Print( 1, "%sedge =%8d%s  ", "\033[1;32m", nFanins,  "\033[0m" );  // green
     Abc_Print( 1, "%slev =%5d%s ",   "\033[1;31m", LevelMax, "\033[0m" );  // red
     Abc_Print( 1, "%s(%.2f)%s  ",    "\033[1;31m", (float)Ave / Gia_ManCoNum(p), "\033[0m" );
