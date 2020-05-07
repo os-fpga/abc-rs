@@ -136,19 +136,98 @@ float Gia_ObjComputeArrival( Gia_Man_t * p, int iObj, int fUseSorting )
     }
     else
     {
-        pDelays = pLutLib->pLutDelays[Gia_ObjLutSize(p, iObj)];
-        if ( fUseSorting )
+        int nLutSize;
+        if ( Gia_ObjLutIsMux(p, iObj) )
         {
-            Gia_LutDelayTraceSortPins( p, iObj, pPinPerm, pPinDelays );
-            Gia_LutForEachFanin( p, iObj, iFanin, k ) 
-                if ( tArrival < Gia_ObjTimeArrival( p, Gia_ObjLutFanin(p,iObj,pPinPerm[k])) + pDelays[k] )
-                    tArrival = Gia_ObjTimeArrival( p, Gia_ObjLutFanin(p,iObj,pPinPerm[k])) + pDelays[k];
+            int maxLutSize = 0;
+            int pFanins[3];
+            extern void Gia_ManPrintGetMuxFanins( Gia_Man_t * p, Gia_Obj_t * pObj, int * pFanins );
+            Gia_ManPrintGetMuxFanins( p, pObj, pFanins );
+            if ( Gia_ObjIsLut(p, pFanins[1]) )
+                maxLutSize = Abc_MaxInt( maxLutSize, Gia_ObjLutSize(p, pFanins[1]) );
+            if ( Gia_ObjIsLut(p, pFanins[2]) )
+                maxLutSize = Abc_MaxInt( maxLutSize, Gia_ObjLutSize(p, pFanins[2]) );
+            assert( maxLutSize > 0 );
+            nLutSize = maxLutSize * 2 + 1;
+            assert( nLutSize <= pLutLib->LutMax );
+            pDelays = pLutLib->pLutDelays[nLutSize];
+
+            if ( fUseSorting )
+            {
+                if ( tArrival < Gia_ObjTimeArrival(p, pFanins[0]) + pDelays[0] )
+                    tArrival = Gia_ObjTimeArrival(p, pFanins[0]) + pDelays[0];
+
+                if ( Gia_ObjIsLut(p, pFanins[1]) )
+                {
+                    Gia_LutDelayTraceSortPins( p, pFanins[1], pPinPerm, pPinDelays );
+                    Gia_LutForEachFanin( p, pFanins[1], iFanin, k )
+                        if ( tArrival < Gia_ObjTimeArrival(p, Gia_ObjLutFanin(p,pFanins[1],pPinPerm[k])) + pDelays[k*2+1] )
+                            tArrival = Gia_ObjTimeArrival( p, Gia_ObjLutFanin(p,pFanins[1],pPinPerm[k])) + pDelays[k*2+1];
+                }
+                else
+                {
+                    if ( tArrival < Gia_ObjTimeArrival(p, pFanins[1]) + pDelays[1] )
+                        tArrival = Gia_ObjTimeArrival(p, pFanins[1]) + pDelays[1];
+                }
+
+                if ( Gia_ObjIsLut(p, pFanins[2]) )
+                {
+                    Gia_LutDelayTraceSortPins( p, pFanins[2], pPinPerm, pPinDelays );
+                    Gia_LutForEachFanin( p, pFanins[2], iFanin, k )
+                        if ( tArrival < Gia_ObjTimeArrival(p, Gia_ObjLutFanin(p,pFanins[2],pPinPerm[k])) + pDelays[k*2+2] )
+                            tArrival = Gia_ObjTimeArrival( p, Gia_ObjLutFanin(p,pFanins[2],pPinPerm[k])) + pDelays[k*2+2];
+                }
+                else
+                {
+                    if ( tArrival < Gia_ObjTimeArrival(p, pFanins[2]) + pDelays[2] )
+                        tArrival = Gia_ObjTimeArrival(p, pFanins[2]) + pDelays[2];
+                }
+            }
+            else
+            {
+                if ( tArrival < Gia_ObjTimeArrival(p, pFanins[0]) + pDelays[0] )
+                    tArrival = Gia_ObjTimeArrival(p, pFanins[0]) + pDelays[0];
+
+                if ( Gia_ObjIsLut(p, pFanins[1]) )
+                {
+                    Gia_LutForEachFanin( p, pFanins[1], iFanin, k )
+                        if ( tArrival < Gia_ObjTimeArrival(p, iFanin) + pDelays[k*2+1] )
+                            tArrival = Gia_ObjTimeArrival(p, iFanin) + pDelays[k*2+1];
+                }
+                else
+                {
+                    if ( tArrival < Gia_ObjTimeArrival(p, pFanins[1]) + pDelays[1] )
+                        tArrival = Gia_ObjTimeArrival(p, pFanins[1]) + pDelays[1];
+                }
+
+                if ( Gia_ObjIsLut(p, pFanins[2]) ) {
+                    Gia_LutForEachFanin( p, pFanins[2], iFanin, k )
+                        if ( tArrival < Gia_ObjTimeArrival(p, iFanin) + pDelays[k*2+2] )
+                            tArrival = Gia_ObjTimeArrival(p, iFanin) + pDelays[k*2+2];
+                }
+                else
+                {
+                    if ( tArrival < Gia_ObjTimeArrival(p, pFanins[2]) + pDelays[2] )
+                        tArrival = Gia_ObjTimeArrival(p, pFanins[2]) + pDelays[2];
+                }
+            }
         }
         else
         {
-            Gia_LutForEachFanin( p, iObj, iFanin, k )
-                if ( tArrival < Gia_ObjTimeArrival(p, iFanin) + pDelays[k] )
-                    tArrival = Gia_ObjTimeArrival(p, iFanin) + pDelays[k];
+            pDelays = pLutLib->pLutDelays[Gia_ObjLutSize(p, iObj)];
+            if ( fUseSorting )
+            {
+                Gia_LutDelayTraceSortPins( p, iObj, pPinPerm, pPinDelays );
+                Gia_LutForEachFanin( p, iObj, iFanin, k )
+                    if ( tArrival < Gia_ObjTimeArrival( p, Gia_ObjLutFanin(p,iObj,pPinPerm[k])) + pDelays[k] )
+                        tArrival = Gia_ObjTimeArrival( p, Gia_ObjLutFanin(p,iObj,pPinPerm[k])) + pDelays[k];
+            }
+            else
+            {
+                Gia_LutForEachFanin( p, iObj, iFanin, k )
+                    if ( tArrival < Gia_ObjTimeArrival(p, iFanin) + pDelays[k] )
+                        tArrival = Gia_ObjTimeArrival(p, iFanin) + pDelays[k];
+            }
         }
     }
     if ( Gia_ObjLutSize(p, iObj) == 0 )
@@ -193,24 +272,135 @@ float Gia_ObjPropagateRequired( Gia_Man_t * p, int iObj, int fUseSorting )
     }
     else 
     {
-        pDelays = pLutLib->pLutDelays[Gia_ObjLutSize(p, iObj)];
-        if ( fUseSorting )
+        int nLutSize;
+        if ( Gia_ObjLutIsMux(p, iObj) )
         {
-            Gia_LutDelayTraceSortPins( p, iObj, pPinPerm, pPinDelays );
-            Gia_LutForEachFanin( p, iObj, iFanin, k )
+            int maxLutSize = 0;
+            int pFanins[3];
+            extern void Gia_ManPrintGetMuxFanins( Gia_Man_t * p, Gia_Obj_t * pObj, int * pFanins );
+            Gia_Obj_t * pObj = Gia_ManObj( p, iObj );
+            Gia_ManPrintGetMuxFanins( p, pObj, pFanins );
+            if ( Gia_ObjIsLut(p, pFanins[1]) )
+                maxLutSize = Abc_MaxInt( maxLutSize, Gia_ObjLutSize(p, pFanins[1]) );
+            if ( Gia_ObjIsLut(p, pFanins[2]) )
+                maxLutSize = Abc_MaxInt( maxLutSize, Gia_ObjLutSize(p, pFanins[2]) );
+            assert( maxLutSize > 0 );
+            nLutSize = maxLutSize * 2 + 1;
+            assert( nLutSize <= pLutLib->LutMax );
+            pDelays = pLutLib->pLutDelays[nLutSize];
+
+            if ( fUseSorting )
             {
-                tRequired = Gia_ObjTimeRequired( p, iObj) - pDelays[k];
-                if ( Gia_ObjTimeRequired( p, Gia_ObjLutFanin(p, iObj,pPinPerm[k])) > tRequired )
-                    Gia_ObjSetTimeRequired( p,  Gia_ObjLutFanin(p, iObj,pPinPerm[k]), tRequired );
+                tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[0];
+                if ( Gia_ObjTimeRequired(p, pFanins[0]) > tRequired )
+                    Gia_ObjSetTimeRequired( p,  pFanins[0], tRequired );
+
+                if ( Gia_ObjIsLut(p, pFanins[1]) )
+                {
+                    float * pDelays2 = pLutLib->pLutDelays[Gia_ObjLutSize(p, pFanins[1])];
+                    Gia_LutDelayTraceSortPins( p, pFanins[1], pPinPerm, pPinDelays );
+                    Gia_LutForEachFanin( p, pFanins[1], iFanin, k )
+                    {
+                        tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[k*2+1];
+                        if ( Gia_ObjTimeRequired( p, Gia_ObjLutFanin(p, pFanins[1],pPinPerm[k])) > tRequired )
+                            Gia_ObjSetTimeRequired( p,  Gia_ObjLutFanin(p, pFanins[1],pPinPerm[k]), tRequired );
+                        if ( Gia_ObjTimeRequired(p, pFanins[1]) > tRequired + pDelays2[k])
+                            Gia_ObjSetTimeRequired( p,  pFanins[1], tRequired + pDelays2[k] );
+                    }
+                }
+                else
+                {
+                    tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[1];
+                    if ( Gia_ObjTimeRequired(p, pFanins[1]) > tRequired )
+                        Gia_ObjSetTimeRequired( p,  pFanins[1], tRequired );
+                }
+
+                if ( Gia_ObjIsLut(p, pFanins[2]) )
+                {
+                    float * pDelays2 = pLutLib->pLutDelays[Gia_ObjLutSize(p, pFanins[2])];
+                    Gia_LutDelayTraceSortPins( p, pFanins[2], pPinPerm, pPinDelays );
+                    Gia_LutForEachFanin( p, pFanins[2], iFanin, k )
+                    {
+                        tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[k*2+2];
+                        if ( Gia_ObjTimeRequired( p, Gia_ObjLutFanin(p, pFanins[2],pPinPerm[k])) > tRequired )
+                            Gia_ObjSetTimeRequired( p,  Gia_ObjLutFanin(p, pFanins[2],pPinPerm[k]), tRequired );
+                        if ( Gia_ObjTimeRequired(p, pFanins[2]) > tRequired + pDelays2[k])
+                            Gia_ObjSetTimeRequired( p,  pFanins[2], tRequired + pDelays2[k] );
+                    }
+                }
+                else
+                {
+                    tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[2];
+                    if ( Gia_ObjTimeRequired(p, pFanins[2]) > tRequired )
+                        Gia_ObjSetTimeRequired( p,  pFanins[2], tRequired );
+                }
+            }
+            else
+            {
+                tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[0];
+                if ( Gia_ObjTimeRequired(p, pFanins[0]) > tRequired )
+                    Gia_ObjSetTimeRequired( p,  pFanins[0], tRequired );
+
+                if ( Gia_ObjIsLut(p, pFanins[1]) )
+                {
+                    float * pDelays2 = pLutLib->pLutDelays[Gia_ObjLutSize(p, pFanins[1])];
+                    Gia_LutForEachFanin( p, pFanins[1], iFanin, k )
+                    {
+                        tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[k*2+1];
+                        if ( Gia_ObjTimeRequired(p, iFanin) > tRequired )
+                            Gia_ObjSetTimeRequired( p,  iFanin, tRequired );
+                        if ( Gia_ObjTimeRequired(p, pFanins[1]) > tRequired + pDelays2[k])
+                            Gia_ObjSetTimeRequired( p,  pFanins[1], tRequired + pDelays2[k] );
+                    }
+                }
+                else
+                {
+                    tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[1];
+                    if ( Gia_ObjTimeRequired(p, pFanins[1]) > tRequired )
+                        Gia_ObjSetTimeRequired( p,  pFanins[1], tRequired );
+                }
+
+                if ( Gia_ObjIsLut(p, pFanins[2]) )
+                {
+                    float * pDelays2 = pLutLib->pLutDelays[Gia_ObjLutSize(p, pFanins[2])];
+                    Gia_LutForEachFanin( p, pFanins[2], iFanin, k )
+                    {
+                        tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[k*2+2];
+                        if ( Gia_ObjTimeRequired(p, iFanin) > tRequired )
+                            Gia_ObjSetTimeRequired( p,  iFanin, tRequired );
+                        if ( Gia_ObjTimeRequired(p, pFanins[2]) > tRequired + pDelays2[k])
+                            Gia_ObjSetTimeRequired( p,  pFanins[2], tRequired + pDelays2[k] );
+                    }
+                }
+                else
+                {
+                    tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[2];
+                    if ( Gia_ObjTimeRequired(p, pFanins[2]) > tRequired )
+                        Gia_ObjSetTimeRequired( p,  pFanins[2], tRequired );
+                }
             }
         }
         else
         {
-            Gia_LutForEachFanin( p, iObj, iFanin, k )
+            pDelays = pLutLib->pLutDelays[Gia_ObjLutSize(p, iObj)];
+            if ( fUseSorting )
             {
-                tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[k];
-                if ( Gia_ObjTimeRequired(p, iFanin) > tRequired )
-                    Gia_ObjSetTimeRequired( p,  iFanin, tRequired );
+                Gia_LutDelayTraceSortPins( p, iObj, pPinPerm, pPinDelays );
+                Gia_LutForEachFanin( p, iObj, iFanin, k )
+                {
+                    tRequired = Gia_ObjTimeRequired( p, iObj) - pDelays[k];
+                    if ( Gia_ObjTimeRequired( p, Gia_ObjLutFanin(p, iObj,pPinPerm[k])) > tRequired )
+                        Gia_ObjSetTimeRequired( p,  Gia_ObjLutFanin(p, iObj,pPinPerm[k]), tRequired );
+                }
+            }
+            else
+            {
+                Gia_LutForEachFanin( p, iObj, iFanin, k )
+                {
+                    tRequired = Gia_ObjTimeRequired(p, iObj) - pDelays[k];
+                    if ( Gia_ObjTimeRequired(p, iFanin) > tRequired )
+                        Gia_ObjSetTimeRequired( p,  iFanin, tRequired );
+                }
             }
         }
     }
@@ -534,8 +724,12 @@ float Gia_ManDelayTraceLutPrint( Gia_Man_t * p, int fVerbose, int fVerbosePath )
                     if ( Gia_ObjTimeSlackObj( p, pObj ) == 0 )
                         break;
                 }
-                tArrival = Gia_ObjTimeArrivalObj( p, pObj );
-                printf( "%8.2f  LUT  (K = %d)\n", tArrival, Gia_ObjLutSize(p, iLut));
+                if ( Gia_ObjLutIsMux(p, iLut) )
+                    printf( "      --  MUX\n");
+                else {
+                    tArrival = Gia_ObjTimeArrivalObj( p, pObj );
+                    printf( "%8.2f  LUT  (K = %d)\n", tArrival, Gia_ObjLutSize(p, iLut));
+                }
             }
             else if ( Gia_ObjIsCi(pObj) )
             {
