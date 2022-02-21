@@ -695,12 +695,17 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
     }
     // found regs till the new line
     vNums = Vec_IntAlloc( 100 );
+    int usedX = 0;
     while ( (c = fgetc(pFile)) != EOF )
     {
         if ( c == '\n' )
             break;
         if ( c == '0' || c == '1' )
             Vec_IntPush( vNums, c - '0' );
+        if ( c == 'x') {
+            usedX = 1;
+            Vec_IntPush( vNums, 0 );
+        }
     }
     nRegs = Vec_IntSize(vNums);
     nFrames = -1;
@@ -712,11 +717,15 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
             break;
         if ( c == '0' || c == '1' )
             Vec_IntPush( vNums, c - '0' );
-        if ( c == 'x') // TODO: what to do with x on input ?
+        if ( c == 'x') {
+            usedX = 1;
             Vec_IntPush( vNums, 0 );
+        }
     }
     fclose( pFile );
 
+    if (usedX)
+        printf( "Warning: Using 0 instead of x in latches or primary inputs\n" );
     int i;
     Abc_Obj_t * pObj;
     int iFrameCex = nFrames;
@@ -763,7 +772,10 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
     }
 
     pCex = Abc_CexAlloc( nRegs, nPi, iFrameCex + 1 );
-    pCex->iPo    = 0; // TODO: is number of primary outputs always 0 for CEX ?
+    // the zero-based number of PO, for which verification failed
+    // fails in Bmc_CexVerify if not less than actual number of PO
+    pCex->iPo    = 0;
+    // the zero-based number of the time-frame, for which verificaiton failed
     pCex->iFrame = iFrameCex;
     assert( Vec_IntSize(vNums) == pCex->nBits );
     for ( c = 0; c < pCex->nBits; c++ )
@@ -837,12 +849,12 @@ int IoCommandReadCex( Abc_Frame_t * pAbc, int argc, char ** argv )
     Abc_FrameClearVerifStatus( pAbc );
     pAbc->Status = Abc_NtkReadCexFile( pFileName, pNtk, &pAbc->pCex, &pAbc->nFrames );
 
-    /*if ( fCheck ) {
+    if ( fCheck ) {
         extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
         Aig_Man_t * pAig = Abc_NtkToDar( pNtk, 0, 1 );
         Bmc_CexCareVerify( pAig, pAbc->pCex, pAbc->pCex, false );
         Aig_ManStop( pAig );
-    }*/
+    }
     return 0;
 
 usage:
