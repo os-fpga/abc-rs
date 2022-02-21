@@ -44,6 +44,7 @@ static int IoCommandReadBblif   ( Abc_Frame_t * pAbc, int argc, char **argv );
 static int IoCommandReadBlif    ( Abc_Frame_t * pAbc, int argc, char **argv );
 static int IoCommandReadBlifMv  ( Abc_Frame_t * pAbc, int argc, char **argv );
 static int IoCommandReadBench   ( Abc_Frame_t * pAbc, int argc, char **argv );
+static int IoCommandReadCex     ( Abc_Frame_t * pAbc, int argc, char **argv );
 static int IoCommandReadDsd     ( Abc_Frame_t * pAbc, int argc, char **argv );
 static int IoCommandReadEdif    ( Abc_Frame_t * pAbc, int argc, char **argv );
 static int IoCommandReadEqn     ( Abc_Frame_t * pAbc, int argc, char **argv );
@@ -113,6 +114,7 @@ void Io_Init( Abc_Frame_t * pAbc )
     Cmd_CommandAdd( pAbc, "I/O", "read_blif",     IoCommandReadBlif,     1 );
     Cmd_CommandAdd( pAbc, "I/O", "read_blif_mv",  IoCommandReadBlifMv,   1 );
     Cmd_CommandAdd( pAbc, "I/O", "read_bench",    IoCommandReadBench,    1 );
+    Cmd_CommandAdd( pAbc, "I/O", "read_cex",      IoCommandReadCex,      1 );
     Cmd_CommandAdd( pAbc, "I/O", "read_dsd",      IoCommandReadDsd,      1 );
     Cmd_CommandAdd( pAbc, "I/O", "read_formula",  IoCommandReadDsd,      1 );
 //    Cmd_CommandAdd( pAbc, "I/O", "read_edif",     IoCommandReadEdif,     1 );
@@ -668,6 +670,189 @@ usage:
     return 1;
 }
 
+/**Function*************************************************************
+
+  Synopsis    []
+
+  Description []
+               
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, int * pnFrames )
+{
+    FILE * pFile;
+    Abc_Cex_t * pCex;
+    Vec_Int_t * vNums;
+    int c, nRegs = -1, nFrames = -1, Status = 0;
+    pFile = fopen( pFileName, "r" );
+    if ( pFile == NULL )
+    {
+        printf( "Cannot open log file for reading \"%s\".\n" , pFileName );
+        return -1;
+    }
+    // found regs till the new line
+    vNums = Vec_IntAlloc( 100 );
+    while ( (c = fgetc(pFile)) != EOF )
+    {
+        if ( c == '\n' )
+            break;
+        if ( c == '0' || c == '1' )
+            Vec_IntPush( vNums, c - '0' );
+    }
+    nRegs = Vec_IntSize(vNums);
+    nFrames = -1;
+    while ( (c = fgetc(pFile)) != EOF )
+    {
+        if ( c == '\n' )
+            nFrames++;
+        if ( c == '#' )
+            break;
+        if ( c == '0' || c == '1' )
+            Vec_IntPush( vNums, c - '0' );
+        if ( c == 'x') // TODO: what to do with x on input ?
+            Vec_IntPush( vNums, 0 );
+    }
+    fclose( pFile );
+
+    int i;
+    Abc_Obj_t * pObj;
+    int iFrameCex = nFrames;
+    int nRegsNtk = 0;
+    int nPiNtk = 0;
+    Abc_NtkForEachLatch( pNtk, pObj, i ) nRegsNtk++;
+    Abc_NtkForEachPi(pNtk, pObj, i ) nPiNtk++;
+    if ( nRegs < 0 )
+    {
+        printf( "Cannot read register number.\n" );
+        Vec_IntFree( vNums );
+        return -1;
+    }
+    if ( nRegs != nRegsNtk )
+    {
+        printf( "Register number not coresponding to Ntk.\n" );
+        Vec_IntFree( vNums );
+        return -1;
+    }
+    if ( Vec_IntSize(vNums)-nRegs == 0 )
+    {
+        printf( "Cannot read counter example.\n" );
+        Vec_IntFree( vNums );
+        return -1;
+    }
+    if ( (Vec_IntSize(vNums)-nRegs) % (iFrameCex + 1) != 0 )
+    {
+        printf( "Incorrect number of bits.\n" );
+        Vec_IntFree( vNums );
+        return -1;
+    }
+    int nPi = (Vec_IntSize(vNums)-nRegs)/(iFrameCex + 1);
+    if ( nPi != nPiNtk )
+    {
+        printf( "Number of primary inputs not coresponding to Ntk.\n" );
+        Vec_IntFree( vNums );
+        return -1;
+    }
+    Abc_NtkForEachLatch( pNtk, pObj, i ) {
+        if ( Vec_IntEntry(vNums, i) ==0)
+            Abc_LatchSetInit0(pObj);
+        else
+            Abc_LatchSetInit1(pObj);
+    }
+
+    pCex = Abc_CexAlloc( nRegs, nPi, iFrameCex + 1 );
+    pCex->iPo    = 0; // TODO: is number of primary outputs always 0 for CEX ?
+    pCex->iFrame = iFrameCex;
+    assert( Vec_IntSize(vNums) == pCex->nBits );
+    for ( c = 0; c < pCex->nBits; c++ )
+        if ( Vec_IntEntry(vNums, c) )
+            Abc_InfoSetBit( pCex->pData, c );
+    Vec_IntFree( vNums );
+    if ( ppCex )
+        *ppCex = pCex;
+    else
+        ABC_FREE( pCex );
+
+    if ( pnFrames )
+        *pnFrames = nFrames;
+    return Status;
+}
+
+/**Function*************************************************************
+
+  Synopsis    []
+
+  Description []
+               
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
+
+
+int IoCommandReadCex( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    Abc_Ntk_t * pNtk;
+    char * pFileName;
+    FILE * pFile;
+    int fCheck;
+    int c;
+
+    fCheck = 1;
+    Extra_UtilGetoptReset();
+    while ( ( c = Extra_UtilGetopt( argc, argv, "ch" ) ) != EOF )
+    {
+        switch ( c )
+        {
+            case 'c':
+                fCheck ^= 1;
+                break;
+            case 'h':
+                goto usage;
+            default:
+                goto usage;
+        }
+    }
+    if ( argc != globalUtilOptind + 1 )
+        goto usage;
+
+    // get the input file name
+    pFileName = argv[globalUtilOptind];
+    if ( (pFile = fopen( pFileName, "r" )) == NULL )
+    {
+        fprintf( pAbc->Err, "Cannot open input file \"%s\". \n", pFileName );
+        return 1;
+    }
+    fclose( pFile );
+
+    pNtk = pAbc->pNtkCur;
+    if ( pNtk == NULL )
+    {
+        fprintf( pAbc->Out, "Empty network.\n" );
+        return 0;
+    }
+    Abc_FrameClearVerifStatus( pAbc );
+    pAbc->Status = Abc_NtkReadCexFile( pFileName, pNtk, &pAbc->pCex, &pAbc->nFrames );
+
+    /*if ( fCheck ) {
+        extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
+        Aig_Man_t * pAig = Abc_NtkToDar( pNtk, 0, 1 );
+        Bmc_CexCareVerify( pAig, pAbc->pCex, pAbc->pCex, false );
+        Aig_ManStop( pAig );
+    }*/
+    return 0;
+
+usage:
+    fprintf( pAbc->Err, "usage: read_cex [-ch] <file>\n" );
+    fprintf( pAbc->Err, "\t         reads the witness cex\n" );
+    fprintf( pAbc->Err, "\t-c     : toggle check after reading [default = %s]\n", fCheck? "yes":"no" );
+    fprintf( pAbc->Err, "\t-h     : prints the command summary\n" );
+    fprintf( pAbc->Err, "\tfile   : the name of a file to read\n" );
+    return 1;
+}
 /**Function*************************************************************
 
   Synopsis    []
