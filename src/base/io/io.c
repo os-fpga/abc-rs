@@ -704,7 +704,9 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
             Vec_IntPush( vNums, c - '0' );
         if ( c == 'x') {
             usedX = 1;
-            Vec_IntPush( vNums, 0 );
+            // set to 2 so we can Abc_LatchSetInitNone
+            // acts like 0 when setting bits
+            Vec_IntPush( vNums, 2 );
         }
     }
     nRegs = Vec_IntSize(vNums);
@@ -767,6 +769,8 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
     Abc_NtkForEachLatch( pNtk, pObj, i ) {
         if ( Vec_IntEntry(vNums, i) ==0)
             Abc_LatchSetInit0(pObj);
+        else if ( Vec_IntEntry(vNums, i) ==2)
+            Abc_LatchSetInitNone(pObj);
         else
             Abc_LatchSetInit1(pObj);
     }
@@ -779,7 +783,7 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
     pCex->iFrame = iFrameCex;
     assert( Vec_IntSize(vNums) == pCex->nBits );
     for ( c = 0; c < pCex->nBits; c++ )
-        if ( Vec_IntEntry(vNums, c) )
+        if ( Vec_IntEntry(vNums, c) == 1)
             Abc_InfoSetBit( pCex->pData, c );
     Vec_IntFree( vNums );
     if ( ppCex )
