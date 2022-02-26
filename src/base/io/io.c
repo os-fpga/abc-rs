@@ -693,35 +693,86 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
         printf( "Cannot open log file for reading \"%s\".\n" , pFileName );
         return -1;
     }
-    // found regs till the new line
+
     vNums = Vec_IntAlloc( 100 );
     int usedX = 0;
-    while ( (c = fgetc(pFile)) != EOF )
-    {
-        if ( c == '\n' )
-            break;
-        if ( c == '0' || c == '1' )
-            Vec_IntPush( vNums, c - '0' );
-        if ( c == 'x') {
-            usedX = 1;
-            // set to 2 so we can Abc_LatchSetInitNone
-            // acts like 0 when setting bits
-            Vec_IntPush( vNums, 2 );
-        }
-    }
-    nRegs = Vec_IntSize(vNums);
+    
+    char Buffer[1000];
+    int state = 0;
+    int iPo = 0;
     nFrames = -1;
-    while ( (c = fgetc(pFile)) != EOF )
+    int status = 0;
+    while ( fgets( Buffer, 1000, pFile ) != NULL )
     {
-        if ( c == '\n' )
-            nFrames++;
-        if ( c == '#' )
+        if ( Buffer[0] == '#' )
+            continue;
+        Buffer[strlen(Buffer) - 1] = '\0';
+        if (state==0 && strlen(Buffer)>1) {
+            // old format detected
+            state = 2;
+            iPo = 0;
+            status = 1;
+        }
+        if (state==1 && Buffer[0]!='b' && Buffer[0]!='c') {
+            // old format detected, first line was actually register
+            state = 2;
+            Vec_IntPush( vNums, status );
+            status = 1;
+        }
+        if (Buffer[0] == '.' )
             break;
-        if ( c == '0' || c == '1' )
-            Vec_IntPush( vNums, c - '0' );
-        if ( c == 'x') {
-            usedX = 1;
-            Vec_IntPush( vNums, 0 );
+        switch(state) {
+            case 0 :
+                {
+                    char c = Buffer[0];
+                    if ( c == '0' || c == '1' || c == '2' ) {
+                        status = c - '0' ;
+                        state = 1;
+                    } else if ( c == 'x' ) {
+                        // old format with one x state latch
+                        usedX = 1;
+                        // set to 2 so we can Abc_LatchSetInitNone
+                        // acts like 0 when setting bits
+                        Vec_IntPush( vNums, 2 );
+                        nRegs = Vec_IntSize(vNums);
+                        state = 3;
+                    } else {
+                        printf( "ERROR: Bad aiger status line.\n" );
+                        return -1;
+                    }
+                }
+                break;
+            case 1 :
+                iPo = atoi(Buffer+1);
+                state = 2;
+                break;
+            case 2 :
+                for (int i=0; i<strlen(Buffer);i++) {
+                    char c = Buffer[i];
+                    if ( c == '0' || c == '1' )
+                        Vec_IntPush( vNums, c - '0' );
+                    else if ( c == 'x') {
+                        usedX = 1;
+                        // set to 2 so we can Abc_LatchSetInitNone
+                        // acts like 0 when setting bits
+                        Vec_IntPush( vNums, 2 );
+                    }
+                }
+                nRegs = Vec_IntSize(vNums);
+                state = 3;
+                break;
+            case 3 :
+                for (int i=0; i<strlen(Buffer);i++) {
+                    char c = Buffer[i];
+                    if ( c == '0' || c == '1' )
+                        Vec_IntPush( vNums, c - '0' );
+                    else if ( c == 'x') {
+                        usedX = 1;
+                        Vec_IntPush( vNums, 0 );
+                    }
+                }
+                nFrames++;
+                break;
         }
     }
     fclose( pFile );
@@ -733,36 +784,44 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
     int iFrameCex = nFrames;
     int nRegsNtk = 0;
     int nPiNtk = 0;
+    int nPoNtk = 0;
     Abc_NtkForEachLatch( pNtk, pObj, i ) nRegsNtk++;
     Abc_NtkForEachPi(pNtk, pObj, i ) nPiNtk++;
+    Abc_NtkForEachPo(pNtk, pObj, i ) nPoNtk++;
     if ( nRegs < 0 )
     {
-        printf( "Cannot read register number.\n" );
+        printf( "ERROR: Cannot read register number.\n" );
         Vec_IntFree( vNums );
         return -1;
     }
     if ( nRegs != nRegsNtk )
     {
-        printf( "Register number not coresponding to Ntk.\n" );
+        printf( "ERROR: Register number not coresponding to Ntk.\n" );
         Vec_IntFree( vNums );
         return -1;
     }
     if ( Vec_IntSize(vNums)-nRegs == 0 )
     {
-        printf( "Cannot read counter example.\n" );
+        printf( "ERROR: Cannot read counter example.\n" );
         Vec_IntFree( vNums );
         return -1;
     }
     if ( (Vec_IntSize(vNums)-nRegs) % (iFrameCex + 1) != 0 )
     {
-        printf( "Incorrect number of bits.\n" );
+        printf( "ERROR: Incorrect number of bits.\n" );
         Vec_IntFree( vNums );
         return -1;
     }
     int nPi = (Vec_IntSize(vNums)-nRegs)/(iFrameCex + 1);
     if ( nPi != nPiNtk )
     {
-        printf( "Number of primary inputs not coresponding to Ntk.\n" );
+        printf( "ERROR: Number of primary inputs not coresponding to Ntk.\n" );
+        Vec_IntFree( vNums );
+        return -1;
+    }
+    if ( iPo >= nPoNtk )
+    {
+        printf( "ERROR: PO that failed verification not coresponding to Ntk.\n" );
         Vec_IntFree( vNums );
         return -1;
     }
@@ -778,7 +837,7 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
     pCex = Abc_CexAlloc( nRegs, nPi, iFrameCex + 1 );
     // the zero-based number of PO, for which verification failed
     // fails in Bmc_CexVerify if not less than actual number of PO
-    pCex->iPo    = 0;
+    pCex->iPo    = iPo;
     // the zero-based number of the time-frame, for which verificaiton failed
     pCex->iFrame = iFrameCex;
     assert( Vec_IntSize(vNums) == pCex->nBits );
