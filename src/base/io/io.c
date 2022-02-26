@@ -2759,6 +2759,10 @@ void Abc_NtkDumpOneCex( FILE * pFile, Abc_Ntk_t * pNtk, Abc_Cex_t * pCex,
         }
         else
         {
+            if (fAiger && !fNames) {
+                fprintf( pFile, "1\n");
+                fprintf( pFile, "b%d\n", pCex->iPo);
+            }
             // output flop values (unaffected by the minimization)
             Abc_NtkForEachLatch( pNtk, pObj, i )
                 if ( fNames )
@@ -2780,6 +2784,8 @@ void Abc_NtkDumpOneCex( FILE * pFile, Abc_Ntk_t * pNtk, Abc_Cex_t * pCex,
                 if ( !fNames )
                     fprintf( pFile, "\n");
             }
+            if (fAiger && !fNames)
+                fprintf( pFile, ".\n");
         }
         Abc_CexFreeP( &pCare );
     }
@@ -2911,13 +2917,15 @@ int IoCommandWriteCex( Abc_Frame_t * pAbc, int argc, char **argv )
             {
                 if ( pCex == NULL )
                     continue;
-                fprintf( pFile, "#\n#\n# CEX for output %d\n#\n", i ); 
+                if (!fAiger)
+                    fprintf( pFile, "#\n#\n# CEX for output %d\n#\n", i );
                 Abc_NtkDumpOneCex( pFile, pNtk, pCex, 
                     fPrintFull, fNames, fUseFfNames, fMinimize, fUseOldMin, fCexInfo,
                     fCheckCex, fUseSatBased, fHighEffort, fAiger, fVerbose );
             }
         }
-        fprintf( pFile, "# DONE\n" ); 
+        if (!fAiger)
+            fprintf( pFile, "# DONE\n" ); 
         fclose( pFile );
     }
     else
