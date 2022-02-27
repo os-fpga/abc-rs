@@ -718,7 +718,7 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
         if (state==1 && Buffer[0]!='b' && Buffer[0]!='c') {
             // old format detected, first line was actually register
             *fOldFormat = 1;
-            state = 2;
+            state = 3;
             Vec_IntPush( vNums, status );
             status = 1;
         }
@@ -764,7 +764,7 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
                 nRegs = Vec_IntSize(vNums);
                 state = 3;
                 break;
-            case 3 :
+            default:
                 for (int i=0; i<strlen(Buffer);i++) {
                     char c = Buffer[i];
                     if ( c == '0' || c == '1' )
