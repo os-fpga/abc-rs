@@ -2707,7 +2707,7 @@ extern Abc_Cex_t * Bmc_CexCareBits( Gia_Man_t * p, Abc_Cex_t * pCexState, Abc_Ce
 
 void Abc_NtkDumpOneCex( FILE * pFile, Abc_Ntk_t * pNtk, Abc_Cex_t * pCex, 
     int fPrintFull, int fNames, int fUseFfNames, int fMinimize, int fUseOldMin, int fCexInfo,
-    int fCheckCex, int fUseSatBased, int fHighEffort, int fAiger, int fVerbose )
+    int fCheckCex, int fUseSatBased, int fHighEffort, int fAiger, int fVerbose, int fExtended )
 {
     Abc_Cex_t * pCare = NULL;
     Abc_Obj_t * pObj;
@@ -2818,7 +2818,7 @@ void Abc_NtkDumpOneCex( FILE * pFile, Abc_Ntk_t * pNtk, Abc_Cex_t * pCex,
         }
         else
         {
-            if (fAiger && !fNames) {
+            if (fExtended && fAiger && !fNames) {
                 fprintf( pFile, "1\n");
                 fprintf( pFile, "b%d\n", pCex->iPo);
             }
@@ -2828,7 +2828,7 @@ void Abc_NtkDumpOneCex( FILE * pFile, Abc_Ntk_t * pNtk, Abc_Cex_t * pCex,
                     fprintf( pFile, "%s@0=%c\n", Abc_ObjName(Abc_ObjFanout0(pObj)), '0'+!Abc_LatchIsInit0(pObj) );
                 else
                     fprintf( pFile, "%c", '0'+!Abc_LatchIsInit0(pObj) );
-            if ( !fNames )
+            if ( !fNames && fAiger)
                 fprintf( pFile, "\n");
             // output PI values (while skipping the minimized ones)
             for ( f = 0; f <= pCex->iFrame; f++ ) {
@@ -2840,10 +2840,10 @@ void Abc_NtkDumpOneCex( FILE * pFile, Abc_Ntk_t * pNtk, Abc_Cex_t * pCex,
                             fprintf( pFile, "%c", '0'+Abc_InfoHasBit(pCex->pData, pCex->nRegs+pCex->nPis*f + i) );
                     else if ( !fNames )
                         fprintf( pFile, "x");
-                if ( !fNames )
+                if ( !fNames && fAiger)
                     fprintf( pFile, "\n");
             }
-            if (fAiger && !fNames)
+            if (fExtended && fAiger && !fNames)
                 fprintf( pFile, ".\n");
         }
         Abc_CexFreeP( &pCare );
@@ -2877,9 +2877,10 @@ int IoCommandWriteCex( Abc_Frame_t * pAbc, int argc, char **argv )
     int fUseFfNames = 0;
     int fVerbose   = 0;
     int fCexInfo   = 0;
+    int fExtended  = 0;
 
     Extra_UtilGetoptReset();
-    while ( ( c = Extra_UtilGetopt( argc, argv, "snmueocafzvhx" ) ) != EOF )
+    while ( ( c = Extra_UtilGetopt( argc, argv, "snmueocafzvhxt" ) ) != EOF )
     {
         switch ( c )
         {
@@ -2918,6 +2919,9 @@ int IoCommandWriteCex( Abc_Frame_t * pAbc, int argc, char **argv )
                 break;
             case 'x':
                 fCexInfo ^= 1;
+                break;
+            case 't':
+                fExtended ^= 1;
                 break;
             case 'h':
                 goto usage;
@@ -2968,7 +2972,7 @@ int IoCommandWriteCex( Abc_Frame_t * pAbc, int argc, char **argv )
         {
             Abc_NtkDumpOneCex( pFile, pNtk, pCex, 
                 fPrintFull, fNames, fUseFfNames, fMinimize, fUseOldMin, fCexInfo,
-                fCheckCex, fUseSatBased, fHighEffort, fAiger, fVerbose );
+                fCheckCex, fUseSatBased, fHighEffort, fAiger, fVerbose, fExtended );
         }
         else if ( pAbc->vCexVec )
         {
@@ -2980,7 +2984,7 @@ int IoCommandWriteCex( Abc_Frame_t * pAbc, int argc, char **argv )
                     fprintf( pFile, "#\n#\n# CEX for output %d\n#\n", i );
                 Abc_NtkDumpOneCex( pFile, pNtk, pCex, 
                     fPrintFull, fNames, fUseFfNames, fMinimize, fUseOldMin, fCexInfo,
-                    fCheckCex, fUseSatBased, fHighEffort, fAiger, fVerbose );
+                    fCheckCex, fUseSatBased, fHighEffort, fAiger, fVerbose, fExtended );
             }
         }
         if (!fAiger)
@@ -3028,6 +3032,7 @@ usage:
     fprintf( pAbc->Err, "\t-x     : minimize using algorithm from cexinfo command [default = %s]\n", fCexInfo? "yes": "no" );
     fprintf( pAbc->Err, "\t-c     : check generated CEX using ternary simulation [default = %s]\n", fCheckCex? "yes": "no" );
     fprintf( pAbc->Err, "\t-a     : print cex in AIGER 1.9 format [default = %s]\n", fAiger? "yes": "no" );
+    fprintf( pAbc->Err, "\t-t     : extended header info when cex in AIGER 1.9 format [default = %s]\n", fAiger? "yes": "no" );
     fprintf( pAbc->Err, "\t-f     : enable printing flop values in each timeframe [default = %s]\n", fPrintFull? "yes": "no" );  
     fprintf( pAbc->Err, "\t-z     : toggle using saved flop names [default = %s]\n", fUseFfNames? "yes": "no" );  
     fprintf( pAbc->Err, "\t-v     : enable verbose output [default = %s]\n", fVerbose? "yes": "no" );  
