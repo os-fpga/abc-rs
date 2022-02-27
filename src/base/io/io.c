@@ -681,7 +681,7 @@ usage:
   SeeAlso     []
 
 ***********************************************************************/
-int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, int * pnFrames )
+int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, int * pnFrames, int * fOldFormat )
 {
     FILE * pFile;
     Abc_Cex_t * pCex;
@@ -696,6 +696,7 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
 
     vNums = Vec_IntAlloc( 100 );
     int usedX = 0;
+    *fOldFormat = 0;
     
     char Buffer[1000];
     int state = 0;
@@ -709,12 +710,14 @@ int Abc_NtkReadCexFile( char * pFileName, Abc_Ntk_t * pNtk, Abc_Cex_t ** ppCex, 
         Buffer[strlen(Buffer) - 1] = '\0';
         if (state==0 && strlen(Buffer)>1) {
             // old format detected
+            *fOldFormat = 1;
             state = 2;
             iPo = 0;
             status = 1;
         }
         if (state==1 && Buffer[0]!='b' && Buffer[0]!='c') {
             // old format detected, first line was actually register
+            *fOldFormat = 1;
             state = 2;
             Vec_IntPush( vNums, status );
             status = 1;
@@ -875,6 +878,7 @@ int IoCommandReadCex( Abc_Frame_t * pAbc, int argc, char ** argv )
     FILE * pFile;
     int fCheck;
     int c;
+    int fOldFormat = 0;
 
     fCheck = 1;
     Extra_UtilGetoptReset();
@@ -910,13 +914,16 @@ int IoCommandReadCex( Abc_Frame_t * pAbc, int argc, char ** argv )
         return 0;
     }
     Abc_FrameClearVerifStatus( pAbc );
-    pAbc->Status = Abc_NtkReadCexFile( pFileName, pNtk, &pAbc->pCex, &pAbc->nFrames );
+    pAbc->Status = Abc_NtkReadCexFile( pFileName, pNtk, &pAbc->pCex, &pAbc->nFrames, &fOldFormat );
 
     if ( fCheck ) {
         extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
         Aig_Man_t * pAig = Abc_NtkToDar( pNtk, 0, 1 );
         Bmc_CexCareVerify( pAig, pAbc->pCex, pAbc->pCex, false );
         Aig_ManStop( pAig );
+    } else if (fOldFormat) {
+        fprintf( pAbc->Err, "Using old aiger format with no checks enabled.\n" );
+        return -1;
     }
     return 0;
 
