@@ -489,10 +489,83 @@ void Gia_ManLogAigStats( Gia_Man_t * p, char * pDumpFile )
   SeeAlso     []
 
 ***********************************************************************/
+extern void Gia_ManPrintGetMuxFanins( Gia_Man_t * p, Gia_Obj_t * pObj, int * pFanins );
 void Gia_ManPrintStats( Gia_Man_t * p, Gps_Par_t * pPars )
 {
     extern float Gia_ManLevelAve( Gia_Man_t * p );
     int fHaveLevels = p->vLevels != NULL;
+    if ( pPars && pPars->pStats )
+    {
+     int i, nSizeMax, pCounts[33] = {0};
+     nSizeMax = Gia_ManLutSizeMax( p );
+
+     Gia_ManForEachLut( p, i )
+        pCounts[ Gia_ObjLutSize(p, i) ]++;
+
+     int SizeAll = 0, NodeAll = 0;
+     for ( i = 0; i <= nSizeMax; i++ )
+     {
+        SizeAll += i * pCounts[i];
+        NodeAll += pCounts[i];
+     }
+
+     FILE* fStats = fopen(pPars->pStats, "w");
+     if (!fStats) {
+       return;
+     }
+
+     fprintf(fStats, "%d\n", NodeAll); 
+
+     int fDisable2Lut = 1;
+     Gia_Obj_t * pObj;
+     int * pLevels;
+     int  k, iFan, nLutSize = 0, nLuts = 0, nFanins = 0, LevelMax = 0, Ave = 0, nMuxF = 0;
+     assert(Gia_ManHasMapping(p));
+     pLevels = ABC_CALLOC( int, Gia_ManObjNum(p) );
+     Gia_ManForEachLut( p, i )
+     {   
+        if ( Gia_ObjLutIsMux(p, i) && !(fDisable2Lut && Gia_ObjLutSize(p, i) == 2) )
+        {   
+            int pFanins[3];
+            if ( Gia_ObjLutSize(p, i) == 3 )
+            {   
+                Gia_ManPrintGetMuxFanins( p, Gia_ManObj(p, i), pFanins );
+                pLevels[i] = Abc_MaxInt( pLevels[i], pLevels[pFanins[0]]+1 );
+                pLevels[i] = Abc_MaxInt( pLevels[i], pLevels[pFanins[1]] );
+                pLevels[i] = Abc_MaxInt( pLevels[i], pLevels[pFanins[2]] );
+            }
+            else if ( Gia_ObjLutSize(p, i) == 2 )
+            {   
+                pObj = Gia_ManObj( p, i );
+                pLevels[i] = Abc_MaxInt( pLevels[i], pLevels[Gia_ObjFaninId0(pObj, i)] );
+                pLevels[i] = Abc_MaxInt( pLevels[i], pLevels[Gia_ObjFaninId1(pObj, i)] );
+            }
+            LevelMax = Abc_MaxInt( LevelMax, pLevels[i] );
+            nFanins++;
+            nMuxF++;
+            continue;
+        }
+        nLuts++;
+        nFanins += Gia_ObjLutSize(p, i); 
+        nLutSize = Abc_MaxInt( nLutSize, Gia_ObjLutSize(p, i) );
+        Gia_LutForEachFanin( p, i, iFan, k )
+            pLevels[i] = Abc_MaxInt( pLevels[i], pLevels[iFan] );
+        pLevels[i]++;
+        LevelMax = Abc_MaxInt( LevelMax, pLevels[i] );
+     }
+     Gia_ManForEachCo( p, pObj, i )
+        Ave += pLevels[Gia_ObjFaninId0p(p, pObj)];
+     ABC_FREE( pLevels );
+
+     fprintf(fStats, "%d\n", LevelMax); 
+
+     fprintf(fStats, "%.2f\n", (float)Ave / Gia_ManCoNum(p)); 
+
+     fclose(fStats);
+
+     return;
+    }
+
     if ( pPars && pPars->fMiter )
     {
         Gia_ManPrintStatsMiter( p, 0 );
