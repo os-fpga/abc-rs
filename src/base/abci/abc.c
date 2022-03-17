@@ -396,6 +396,7 @@ static int Abc_CommandAbc9WriteVer           ( Abc_Frame_t * pAbc, int argc, cha
 static int Abc_CommandAbc9Write              ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9WriteLut           ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9Ps                 ( Abc_Frame_t * pAbc, int argc, char ** argv );
+static int Abc_CommandAbc9DE                 ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9PFan               ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9PSig               ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandAbc9Status             ( Abc_Frame_t * pAbc, int argc, char ** argv );
@@ -1139,6 +1140,7 @@ void Abc_Init( Abc_Frame_t * pAbc )
     Cmd_CommandAdd( pAbc, "ABC9",         "&write",        Abc_CommandAbc9Write,        0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&wlut",         Abc_CommandAbc9WriteLut,     0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&ps",           Abc_CommandAbc9Ps,           0 );
+    Cmd_CommandAdd( pAbc, "ABC9",         "&de",           Abc_CommandAbc9DE,           0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&pfan",         Abc_CommandAbc9PFan,         0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&psig",         Abc_CommandAbc9PSig,         0 );
     Cmd_CommandAdd( pAbc, "ABC9",         "&status",       Abc_CommandAbc9Status,       0 );
@@ -31253,16 +31255,118 @@ usage:
   SeeAlso     []
 
 ***********************************************************************/
+int Abc_CommandAbc9DE( Abc_Frame_t * pAbc, int argc, char ** argv )
+{
+    Gde_Par_t Pars, * pPars = &Pars;
+    int c;
+    memset( pPars, 0, sizeof(Gde_Par_t) );
+    Extra_UtilGetoptReset();
+    pPars->pInputEqnFile = NULL;
+    pPars->pOutputEqnFile = NULL;
+    while ( ( c = Extra_UtilGetopt( argc, argv, "iotdgv" ) ) != EOF )
+    {
+        switch ( c )
+        {
+        case 'i':
+            pPars->pInputEqnFile = argv[globalUtilOptind];
+            globalUtilOptind++;
+            break;
+        case 'o':
+            pPars->pOutputEqnFile = argv[globalUtilOptind];
+            globalUtilOptind++;
+            break;
+        case 't':
+            pPars->pTarget = argv[globalUtilOptind];
+            globalUtilOptind++;
+            break;
+        case 'd':
+            pPars->pDepth = argv[globalUtilOptind];
+            globalUtilOptind++;
+            break;
+        case 'g':
+            pPars->fGraph ^= 1;
+            break;
+        case 'v':
+            pPars->fVerbose ^= 1;
+            break;
+        case 'h':
+            goto usage;
+        default:
+            goto usage;
+        }
+    }
+
+    if (pPars->pInputEqnFile == NULL) {
+       Abc_Print( -1, "Abc_CommandAbc9DE(): There is no input file provided.\n" );
+       return 1;
+    }
+    if (pPars->pOutputEqnFile == NULL) {
+       Abc_Print( -1, "Abc_CommandAbc9DE(): There is no output file provided.\n" );
+       return 1;
+    }
+
+    char cmd[10000];
+
+    if (getenv("DE") == NULL) {
+       Abc_Print( -1, "Abc_CommandAbc9DE(): please set env DE executable path.\n" );
+       return 1;
+    }
+
+    sprintf(cmd, "%s %s %s %d %s %d %d", getenv("DE"), pPars->pInputEqnFile, pPars->pOutputEqnFile,
+            (!strcmp(pPars->pTarget,"area") ? 0 : ((!strcmp(pPars->pTarget, "delay") ? 1 : 2))),
+            pPars->pDepth, pPars->fGraph, pPars->fVerbose);
+
+#if 0
+    fprintf(stdout, "%s\n", cmd);
+    getchar();
+#endif
+
+    system(cmd);
+ 
+    return 0;
+
+usage:
+    Abc_Print( -2, "usage: &de [-iotdg] [-i file] [-o file]\n" );
+    Abc_Print( -2, "\t          call DE (design explorer)\n" );
+    Abc_Print( -2, "\t-i file    : Eqn file name to read\n" );
+    Abc_Print( -2, "\t-o file    : Eqn file name to write\n" );
+    Abc_Print( -2, "\t-t         : DE target {area, delay, mixed}\n");
+    Abc_Print( -2, "\t-d [0,10]  : DE exploration depth [0,10]\n");
+    Abc_Print( -2, "\t-g         : DE graphical exploration analysis (using 'dot' and 'okular')\n");
+    Abc_Print( -2, "\t-v         : DE verbose mode\n");
+    return 1;
+}
+
+/**Function*************************************************************
+
+  Synopsis    []
+
+  Description []
+
+  SideEffects []
+
+  SeeAlso     []
+
+***********************************************************************/
 int Abc_CommandAbc9Ps( Abc_Frame_t * pAbc, int argc, char ** argv )
 {
     Gps_Par_t Pars, * pPars = &Pars;
     int c, fBest = 0;
     memset( pPars, 0, sizeof(Gps_Par_t) );
     Extra_UtilGetoptReset();
-    while ( ( c = Extra_UtilGetopt( argc, argv, "Dtpcnlmaszxbh" ) ) != EOF )
+    while ( ( c = Extra_UtilGetopt( argc, argv, "rDtpcnlmaszxbh" ) ) != EOF )
     {
         switch ( c )
         {
+        case 'r':
+            if ( globalUtilOptind >= argc )
+            {
+                Abc_Print( -1, "Command line switch \"-r\" should be followed by a file name.\n" );
+                goto usage;
+            }
+            pPars->pStats = argv[globalUtilOptind];
+            globalUtilOptind++;
+            break;
         case 't':
             pPars->fTents ^= 1;
             break;

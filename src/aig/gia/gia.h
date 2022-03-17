@@ -243,10 +243,21 @@ struct Gia_Man_t_
     Gia_Dat_t *    pUData;
 };
 
+typedef struct Gde_Par_t_ Gde_Par_t;
+struct Gde_Par_t_
+{
+    char*          pInputEqnFile;
+    char*          pOutputEqnFile;
+    char*          pTarget;
+    char*          pDepth;
+    int            fGraph;
+    int            fVerbose;
+};
 
 typedef struct Gps_Par_t_ Gps_Par_t;
 struct Gps_Par_t_
 {
+    char*          pStats;
     int            fTents;
     int            fSwitch;
     int            fCut;
