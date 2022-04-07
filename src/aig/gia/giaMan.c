@@ -21,6 +21,9 @@
 #include <ctype.h>
 
 #include "gia.h"
+#include "giaAig.h"
+#include "base/main/mainInt.h"
+
 #include "misc/tim/tim.h"
 #include "proof/abs/abs.h"
 #include "opt/dar/dar.h"
@@ -490,28 +493,31 @@ void Gia_ManLogAigStats( Gia_Man_t * p, char * pDumpFile )
 
 ***********************************************************************/
 extern void Gia_ManPrintGetMuxFanins( Gia_Man_t * p, Gia_Obj_t * pObj, int * pFanins );
+extern Abc_Ntk_t * Abc_NtkFromMappedGia( Gia_Man_t * p, int fFindEnables, int fUseBuffs );
+
 void Gia_ManPrintStats( Gia_Man_t * p, Gps_Par_t * pPars )
 {
     extern float Gia_ManLevelAve( Gia_Man_t * p );
     int fHaveLevels = p->vLevels != NULL;
     if ( pPars && pPars->pStats )
     {
-     int i, nSizeMax, pCounts[33] = {0};
-     nSizeMax = Gia_ManLutSizeMax( p );
-
-     Gia_ManForEachLut( p, i )
-        pCounts[ Gia_ObjLutSize(p, i) ]++;
-
-     int SizeAll = 0, NodeAll = 0;
-     for ( i = 0; i <= nSizeMax; i++ )
-     {
-        SizeAll += i * pCounts[i];
-        NodeAll += pCounts[i];
-     }
-
      FILE* fStats = fopen(pPars->pStats, "w");
      if (!fStats) {
        return;
+     }
+
+     // Count number of equations after LUT mapping : this corresponds exactly to the number
+     // of luts (do not count trough the "Gia_ManForEachLut" which is wrong)
+     //
+     Abc_Obj_t * pNode;
+
+     int NodeAll = 0, i = 0;
+
+     Abc_Ntk_t* pNtk = Abc_NtkFromMappedGia( p, 0, 0 );
+
+     Abc_NtkForEachNode( pNtk, pNode, i )
+     {
+         NodeAll += 1;
      }
 
      fprintf(fStats, "%d\n", NodeAll); 
