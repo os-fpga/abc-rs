@@ -78,13 +78,16 @@
 #include <string.h>
 #include <stdlib.h>
 
-char* getDEPath()
+int getDEPath(char* buf)
 {
+    char* de_env = getenv("DE");
+    if (de_env) {
+        strcpy(buf, de_env);
+        return 1;
+    }
     int res;
-    char* buf;
     char PATH_DELIMITER;
 
-    buf = (char*)malloc(PATH_MAX);
 #if defined(_MSC_VER) || defined(__MINGW32__) || defined(__CYGWIN__) || defined(_WIN32)
     res = GetModuleFileNameA(0, buf, PATH_MAX - 1);
     PATH_DELIMITER = ';';
@@ -95,9 +98,7 @@ char* getDEPath()
 
     if (0 > res || (res >=  PATH_MAX - 1))
     {
-        free(buf);
-        buf = NULL;
-        return buf;
+        return 0;
     }
 
     buf[res] = '\0';
@@ -111,7 +112,7 @@ char* getDEPath()
 #endif
         {
             strcpy(buf+i+1,"de");
-            return buf;
+            return 1;
         }
     }
 
@@ -130,13 +131,12 @@ char* getDEPath()
             strcat(buf, "/de");
 #endif
             if( 0 == access(buf, F_OK)){
-                return buf;
+                return 1;
             }
             tmp = strtok(NULL,PATH_DELIMITER);
         }
     }
-    free(buf);
-    return NULL;
+    return 0;
 }
 
 ABC_NAMESPACE_IMPL_START
@@ -31376,12 +31376,9 @@ int Abc_CommandAbc9DE( Abc_Frame_t * pAbc, int argc, char ** argv )
     }
 
     char cmd[10000];
-    char* de_env = getenv("DE");
-    char* buffer = de_env ? de_env : getDEPath();
+    char buffer[PATH_MAX];
 
-    if (buffer == NULL || (0 != access(buffer, F_OK))) {
-        if (!de_env)
-            free(buffer);
+    if (0 == getDEPath(buffer) || 0 != access(buffer, F_OK)) {
         Abc_Print( -1, "Abc_CommandAbc9DE(): Could not find DE executable.\n" );
         return 1;
     }
@@ -31390,8 +31387,6 @@ int Abc_CommandAbc9DE( Abc_Frame_t * pAbc, int argc, char ** argv )
             (!strcmp(pPars->pTarget,"area") ? 0 : ((!strcmp(pPars->pTarget, "delay") ? 1 : 2))),
             pPars->pDepth, pPars->fGraph, pPars->fVerbose);
 
-    if (!de_env)
-        free(buffer);
 #if 0
     fprintf(stdout, "%s\n", cmd);
     getchar();
