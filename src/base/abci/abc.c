@@ -69,14 +69,84 @@
 #include <unistd.h>
 #endif
 
+#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__CYGWIN__) || defined(_WIN32)
+#define F_OK 0
+#define access _access
+#endif
+
+#include <limits.h>
+#include <string.h>
+#include <stdlib.h>
+
+int getDEPath(char* buf)
+{
+    char* de_env = getenv("DE");
+    if (de_env) {
+        strcpy(buf, de_env);
+        return 1;
+    }
+    int res;
+    char PATH_DELIMITER;
+
+#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__CYGWIN__) || defined(_WIN32)
+    res = GetModuleFileNameA(0, buf, PATH_MAX - 1);
+    PATH_DELIMITER = ';';
+#else
+    res = readlink("/proc/self/exe", buf, PATH_MAX);
+    PATH_DELIMITER = ':';
+#endif
+
+    if (0 > res || (res >=  PATH_MAX - 1))
+    {
+        return 0;
+    }
+
+    buf[res] = '\0';
+    int i;
+    for (i = res; i >= 0; i--)
+    {
+#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__CYGWIN__) || defined(_WIN32)
+        if (buf[i] == '\\')
+#else
+        if (buf[i] == '/')
+#endif
+        {
+            strcpy(buf+i+1,"de");
+            return 1;
+        }
+    }
+
+    //The programm path is not found yet
+    char* path;
+    char* tmp;
+
+    path = getenv("PATH");
+    if( path != NULL){
+        tmp = strtok(path,PATH_DELIMITER);
+        while(tmp != NULL){
+            strcpy(buf, tmp);
+#if defined(_MSC_VER) || defined(__MINGW32__) || defined(__CYGWIN__) || defined(_WIN32)
+            strcat(buf, "\\de.exe");
+#else
+            strcat(buf, "/de");
+#endif
+            if( 0 == access(buf, F_OK)){
+                return 1;
+            }
+            tmp = strtok(NULL,PATH_DELIMITER);
+        }
+    }
+    return 0;
+}
+
 ABC_NAMESPACE_IMPL_START
 
 ////////////////////////////////////////////////////////////////////////
 ///                        DECLARATIONS                              ///
 ////////////////////////////////////////////////////////////////////////
 
-//#define USE_MINISAT22
 
+//#define USE_MINISAT22
 static int Abc_CommandPrintStats             ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandPrintExdc              ( Abc_Frame_t * pAbc, int argc, char ** argv );
 static int Abc_CommandPrintIo                ( Abc_Frame_t * pAbc, int argc, char ** argv );
@@ -31297,22 +31367,23 @@ int Abc_CommandAbc9DE( Abc_Frame_t * pAbc, int argc, char ** argv )
     }
 
     if (pPars->pInputEqnFile == NULL) {
-       Abc_Print( -1, "Abc_CommandAbc9DE(): There is no input file provided.\n" );
-       return 1;
+        Abc_Print( -1, "Abc_CommandAbc9DE(): There is no input file provided.\n" );
+        return 1;
     }
     if (pPars->pOutputEqnFile == NULL) {
-       Abc_Print( -1, "Abc_CommandAbc9DE(): There is no output file provided.\n" );
-       return 1;
+        Abc_Print( -1, "Abc_CommandAbc9DE(): There is no output file provided.\n" );
+        return 1;
     }
 
     char cmd[10000];
+    char buffer[PATH_MAX];
 
-    if (getenv("DE") == NULL) {
-       Abc_Print( -1, "Abc_CommandAbc9DE(): please set env DE executable path.\n" );
-       return 1;
+    if (0 == getDEPath(buffer) || 0 != access(buffer, F_OK)) {
+        Abc_Print( -1, "Abc_CommandAbc9DE(): Could not find DE executable.\n" );
+        return 1;
     }
 
-    sprintf(cmd, "%s %s %s %d %s %d %d", getenv("DE"), pPars->pInputEqnFile, pPars->pOutputEqnFile,
+    sprintf(cmd, "%s %s %s %d %s %d %d", buffer, pPars->pInputEqnFile, pPars->pOutputEqnFile,
             (!strcmp(pPars->pTarget,"area") ? 0 : ((!strcmp(pPars->pTarget, "delay") ? 1 : 2))),
             pPars->pDepth, pPars->fGraph, pPars->fVerbose);
 
