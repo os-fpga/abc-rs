@@ -252,6 +252,7 @@ struct Gde_Par_t_
     char*          pDepth;
     int            fGraph;
     int            fVerbose;
+    char*          pPath;
 };
 
 typedef struct Gps_Par_t_ Gps_Par_t;
