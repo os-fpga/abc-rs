@@ -97,7 +97,7 @@ Abc_Ntk_t * Io_ReadEqnNetwork( Extra_FileReader_t * p )
     // allocate the empty network
     pNtk = Abc_NtkAlloc( ABC_NTK_NETLIST, ABC_FUNC_AIG, 1 );
     // set the specs
-    pNtk->pName = Extra_FileNameGeneric(Extra_FileReaderGetFileName(p));
+    pNtk->pName = Extra_FileNameGeneric(Extra_FileNameWithoutPath(Extra_FileReaderGetFileName(p)));
     pNtk->pSpec = Extra_UtilStrsav(Extra_FileReaderGetFileName(p));
 
     // go through the lines of the file

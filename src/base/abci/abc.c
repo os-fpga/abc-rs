@@ -31333,7 +31333,7 @@ int Abc_CommandAbc9DE( Abc_Frame_t * pAbc, int argc, char ** argv )
     Extra_UtilGetoptReset();
     pPars->pInputEqnFile = NULL;
     pPars->pOutputEqnFile = NULL;
-    while ( ( c = Extra_UtilGetopt( argc, argv, "iotdgv" ) ) != EOF )
+    while ( ( c = Extra_UtilGetopt( argc, argv, "iotdgvp" ) ) != EOF )
     {
         switch ( c )
         {
@@ -31359,6 +31359,10 @@ int Abc_CommandAbc9DE( Abc_Frame_t * pAbc, int argc, char ** argv )
         case 'v':
             pPars->fVerbose ^= 1;
             break;
+        case 'p':
+            pPars->pPath = argv[globalUtilOptind];
+            globalUtilOptind++;
+            break;
         case 'h':
             goto usage;
         default:
@@ -31375,6 +31379,10 @@ int Abc_CommandAbc9DE( Abc_Frame_t * pAbc, int argc, char ** argv )
         return 1;
     }
 
+    if (pPars->pPath == NULL) {
+        pPars->pPath = ".";
+    }
+
     char cmd[10000];
     char buffer[PATH_MAX];
 
@@ -31383,9 +31391,9 @@ int Abc_CommandAbc9DE( Abc_Frame_t * pAbc, int argc, char ** argv )
         return 1;
     }
 
-    sprintf(cmd, "%s %s %s %d %s %d %d", buffer, pPars->pInputEqnFile, pPars->pOutputEqnFile,
+    sprintf(cmd, "%s %s %s %d %s %d %d %s", buffer, pPars->pInputEqnFile, pPars->pOutputEqnFile,
             (!strcmp(pPars->pTarget,"area") ? 0 : ((!strcmp(pPars->pTarget, "delay") ? 1 : 2))),
-            pPars->pDepth, pPars->fGraph, pPars->fVerbose);
+            pPars->pDepth, pPars->fGraph, pPars->fVerbose, pPars->pPath);
 
 #if 0
     fprintf(stdout, "%s\n", cmd);
@@ -31405,6 +31413,7 @@ usage:
     Abc_Print( -2, "\t-d [0,10]  : DE exploration depth [0,10]\n");
     Abc_Print( -2, "\t-g         : DE graphical exploration analysis (using 'dot' and 'okular')\n");
     Abc_Print( -2, "\t-v         : DE verbose mode\n");
+    Abc_Print( -2, "\t-p         : DE temporary directory path\n");
     return 1;
 }
 
