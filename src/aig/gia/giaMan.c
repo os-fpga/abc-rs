@@ -495,6 +495,9 @@ void Gia_ManLogAigStats( Gia_Man_t * p, char * pDumpFile )
 extern void Gia_ManPrintGetMuxFanins( Gia_Man_t * p, Gia_Obj_t * pObj, int * pFanins );
 extern Abc_Ntk_t * Abc_NtkFromMappedGia( Gia_Man_t * p, int fFindEnables, int fUseBuffs );
 
+// Function modified from its original to process -r option invoked by DE to get the 
+// network information back (e.g. : #PIs, #Luts, Max Logic level, Avg. logic level).
+//
 void Gia_ManPrintStats( Gia_Man_t * p, Gps_Par_t * pPars )
 {
     extern float Gia_ManLevelAve( Gia_Man_t * p );
@@ -506,8 +509,17 @@ void Gia_ManPrintStats( Gia_Man_t * p, Gps_Par_t * pPars )
        return;
      }
 
+     int nbPIs = Gia_ManCiNum(p);
+
+     // Dump number of PIs
+     //
+     fprintf(fStats, "%d\n", nbPIs); // usefull to know if we can do BDD/mux based 
+                                     // decomposition (we need small number of PIs to
+                                     // do that).
+
      // Count number of equations after LUT mapping : this corresponds exactly to the number
-     // of luts (do not count trough the "Gia_ManForEachLut" which is wrong)
+     // of luts. We do not count through the "Gia_ManForEachLut" which is wrong because it 
+     // does not count LUT1 inverters.
      //
      Abc_Obj_t * pNode;
 
@@ -520,6 +532,8 @@ void Gia_ManPrintStats( Gia_Man_t * p, Gps_Par_t * pPars )
          NodeAll += 1;
      }
 
+     // Dump number of LUTs
+     //
      fprintf(fStats, "%d\n", NodeAll); 
 
      int fDisable2Lut = 1;
@@ -563,14 +577,18 @@ void Gia_ManPrintStats( Gia_Man_t * p, Gps_Par_t * pPars )
         Ave += pLevels[Gia_ObjFaninId0p(p, pObj)];
      ABC_FREE( pLevels );
 
+     // Dump max Level of Logic through LUTs
+     //
      fprintf(fStats, "%d\n", LevelMax); 
 
+     // Dump average Level of Logic in the whole Boolean network
+     //
      fprintf(fStats, "%.2f\n", (float)Ave / Gia_ManCoNum(p)); 
 
      fclose(fStats);
 
      return;
-    }
+    }  // end of -r mode for DE
 
     if ( pPars && pPars->fMiter )
     {
