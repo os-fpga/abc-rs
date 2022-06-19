@@ -253,6 +253,7 @@ struct Gde_Par_t_
     int            fGraph;
     int            fVerbose;
     char*          pPath;
+    char*          fThreadNumber;
 };
 
 typedef struct Gps_Par_t_ Gps_Par_t;
