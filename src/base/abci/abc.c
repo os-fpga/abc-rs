@@ -31418,7 +31418,7 @@ usage:
     Abc_Print( -2, "\t-g         : DE graphical exploration analysis (using 'dot' and 'okular')\n");
     Abc_Print( -2, "\t-v         : DE verbose mode\n");
     Abc_Print( -2, "\t-p         : DE temporary directory path\n");
-    Abc_Print( -2, "\t-n         : DE number of max threads\n");
+    Abc_Print( -2, "\t-n         : DE max number of threads\n");
     return 1;
 }
 
