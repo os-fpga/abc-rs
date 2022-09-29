@@ -67,6 +67,11 @@
 
 #ifndef _WIN32
 #include <unistd.h>
+#else
+#include <Windows.h>
+#ifndef PATH_MAX
+#define PATH_MAX MAX_PATH   //Windows uses MAX_PATH instead of PATH_MAX 
+#endif
 #endif
 
 #if defined(_MSC_VER) || defined(__MINGW32__) || defined(__CYGWIN__) || defined(_WIN32)
@@ -89,18 +94,22 @@ int getDEPath(char* buf)
     char PATH_DELIMITER;
 
 #if defined(_MSC_VER) || defined(__MINGW32__) || defined(__CYGWIN__) || defined(_WIN32)
-    res = GetModuleFileNameA(0, buf, PATH_MAX - 1);
+    #define DE_EXE "de.exe"
+
+    char tmp_buffer[MAX_PATH];
+    res = GetModuleFileNameA(NULL, buf, MAX_PATH -1);
+    res = GetLongPathNameA(buf, tmp_buffer, MAX_PATH-1);
+    memcpy(buf,tmp_buffer,MAX_PATH);
     PATH_DELIMITER = ';';
 #else
+    #define DE_EXE "de"
     res = readlink("/proc/self/exe", buf, PATH_MAX);
     PATH_DELIMITER = ':';
 #endif
-
     if (0 > res || (res >=  PATH_MAX - 1))
     {
         return 0;
     }
-
     buf[res] = '\0';
     int i;
     for (i = res; i >= 0; i--)
@@ -111,11 +120,10 @@ int getDEPath(char* buf)
         if (buf[i] == '/')
 #endif
         {
-            strcpy(buf+i+1,"de");
+            strcpy(buf+i+1,DE_EXE);
             return 1;
         }
     }
-
     //The programm path is not found yet
     char* path;
     char* tmp;
@@ -31404,8 +31412,22 @@ int Abc_CommandAbc9DE( Abc_Frame_t * pAbc, int argc, char ** argv )
     getchar();
 #endif
 
+#ifdef _WIN32
+    int ret = 0;
+    char  p_buffer[BUFSIZ];
+    FILE* pipe = _popen(cmd, "rt");
+    if(pipe == NULL) {
+        _pclose(pipe);
+    }
+    else {
+        while (fgets(p_buffer, BUFSIZ, pipe)) {}
+
+        ret = _pclose(pipe);
+    }
+#else
     system(cmd);
- 
+#endif
+
     return 0;
 
 usage:
