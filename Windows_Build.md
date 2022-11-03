@@ -8,7 +8,24 @@ executable - abc.exe required abc.rc for work.Both must be in Release directory 
 path to sources - Raptor\yosys_verific_rs\logic_synthesis-rs\abc-rs
 executable will be created in Raptor\yosys_verific_rs\logic_synthesis-rs\abc-rs\ _TEST\ directory
 
-build
+Downloads
+
+
+You need to download
+1. <sed> command for Windows from here 
+	https://gnuwin32.sourceforge.net/packages/sed.htm
+2. <awk> command from this link
+	<link>
+3. <unix2dos> command from this link
+	https://sourceforge.net/projects/dos2unix/
+
+4. And you need to install PowerShell Core(pwsh.exe)
+	Attention you not need Windows PowerShell 
+5. VisalStudio 2019 (with C++ Desktop development package)
+	https://visualstudio.microsoft.com/vs/older-downloads/
+
+
+Build
 Step 1: run this commands with "pwsh.exe"
 
 ```bash
