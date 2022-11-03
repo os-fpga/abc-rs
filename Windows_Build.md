@@ -20,7 +20,7 @@ You need to download
 	https://sourceforge.net/projects/dos2unix/
 
 4. And you need to install PowerShell Core(pwsh.exe)
-	Attention you not need Windows PowerShell 
+	https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?WT.mc_id=THOMASMAURER-blog-thmaure&view=powershell-7
 5. VisalStudio 2019 (with C++ Desktop development package)
 	https://visualstudio.microsoft.com/vs/older-downloads/
 
