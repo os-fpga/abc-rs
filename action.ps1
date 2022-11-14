@@ -13,4 +13,9 @@ pwsh.exe .\function.ps1
 devenv abcspace.dsw /upgrade  ; if (-not $? ) { cat UpgradeLog.htm }
 msbuild abcspace.sln /m /nologo /p:Configuration=Release /p:PlatformTarget=x86
 
-Write-Output "abc action script end"
+<# After build we copying abc.exe, abc.rc and pthreadVC2.dll files to Release directory #>
+copy .\lib\x64\pthreadVC2.dll ..\..\x64\Release
+copy .\_TEST\abc.exe ..\..\x64\Release
+copy .\abc.rc ..\..\x64\Release
+
+Write-Outpu "abc action script end"
