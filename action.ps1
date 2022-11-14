@@ -10,5 +10,7 @@ unix2dos .\*.dsp
 <# executing MsDevShell #>
 pwsh.exe .\function.ps1
 
+devenv abcspace.dsw /upgrade  ; if (-not $? ) { cat UpgradeLog.htm }
+msbuild abcspace.sln /m /nologo /p:Configuration=Release /p:PlatformTarget=x86
 
 Write-Output "abc action script end"
