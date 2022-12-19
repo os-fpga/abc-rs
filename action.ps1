@@ -20,4 +20,4 @@ copy .\lib\x64\pthreadVC2.dll ..\..\x64\Release
 copy .\_TEST\abc.exe ..\..\x64\Release
 copy .\abc.rc ..\..\x64\Release
 
-Write-Outpu "abc action script end"
+Write-Output "abc action script end"
