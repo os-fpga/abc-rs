@@ -14,8 +14,15 @@ devenv abcspace.dsw /upgrade  ; if (-not $? ) { cat UpgradeLog.htm }
 msbuild abcspace.sln /m /nologo /p:Configuration=Release /p:PlatformTarget=x86
 
 <# After build we copying abc.exe, abc.rc and pthreadVC2.dll files to Release directory #>
-mkdir ../../x64
-mkdir ../../x64/Release
+if(Test-Path -Path ../../x64/Release)
+{
+	Write-Output "Release directory exists"
+}
+else
+{
+	mkdir ../../x64
+	mkdir ../../x64/Release
+}
 copy .\lib\x64\pthreadVC2.dll ..\..\x64\Release
 copy .\_TEST\abc.exe ..\..\x64\Release
 copy .\abc.rc ..\..\x64\Release
