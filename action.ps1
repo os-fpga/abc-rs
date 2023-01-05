@@ -1,5 +1,5 @@
 
-Write-Output "abc action script start "
+Write-Output "abc action script starts "
 
 
 sed -i 's#ABC_USE_PTHREADS\"#ABC_DONT_USE_PTHREADS\" /D \"_ALLOW_KEYWORD_MACROS=1\"#g' .\*.dsp
@@ -11,20 +11,24 @@ unix2dos .\*.dsp
 pwsh.exe .\function.ps1
 
 devenv abcspace.dsw /upgrade  ; if (-not $? ) { cat UpgradeLog.htm }
+Write-Output "Build abc..."
 msbuild abcspace.sln /m /nologo /p:Configuration=Release /p:PlatformTarget=x86
 
 <# After build we copying abc.exe, abc.rc and pthreadVC2.dll files to Release directory #>
-if(Test-Path -Path ../../x64/Release)
+
+if(Test-Path -Path .\..\..\yosys_verific_rs\bin)
 {
-	Write-Output "Release directory exists"
+	Write-Output "bin directory already exists"
 }
 else
 {
-	mkdir ../../x64
-	mkdir ../../x64/Release
+	mkdir .\..\..\bin
 }
-copy .\lib\x64\pthreadVC2.dll ..\..\x64\Release
-copy .\_TEST\abc.exe ..\..\x64\Release
-copy .\abc.rc ..\..\x64\Release
 
-Write-Output "abc action script end"
+Write-Output "Copying files to the bin directory..."
+
+copy .\lib\x64\pthreadVC2.dll ..\..\bin
+copy .\_TEST\abc.exe ..\..\bin
+copy .\abc.rc ..\..\bin
+
+Write-Output "abc action script ended"
