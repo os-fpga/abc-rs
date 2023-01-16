@@ -1,5 +1,5 @@
 
-Write-Output "abc action script start "
+Write-Output "abc action script starts "
 
 $OldPATH = $PATH
 $env:PATH = (Test-Path -Path "C:\cygwin64\bin") ? "C:\cygwin64\bin\" : "C:\cygwin\bin\"
@@ -19,15 +19,25 @@ unix2dos .\*.dsp
 ./function.ps1
 
 devenv abcspace.dsw /upgrade  ; if (-not $? ) { cat UpgradeLog.htm }
+Write-Output "Build abc..."
 msbuild abcspace.sln /m /nologo /p:Configuration=Release /p:PlatformTarget=x86
 
 <# After build we copying abc.exe, abc.rc and pthreadVC2.dll files to Release directory #>
-$CurLoc = Get-Location
-Write-Output $CurLoc
-mkdir ..\..\x64
-mkdir ..\..\x64\Release
-copy .\lib\x64\pthreadVC2.dll ..\..\x64\Release
-copy .\_TEST\abc.exe ..\..\x64\Release
-copy .\abc.rc ..\..\x64\Release
 
-Write-Output "abc action script end"
+
+if(Test-Path -Path .\..\..\yosys_verific_rs\bin)
+{
+	Write-Output "bin directory already exists"
+}
+else
+{
+	mkdir .\..\..\bin
+}
+
+Write-Output "Copying files to the bin directory..."
+
+copy .\lib\x64\pthreadVC2.dll ..\..\bin
+copy .\_TEST\abc.exe ..\..\bin
+copy .\abc.rc ..\..\bin
+
+Write-Output "abc action script ended"
