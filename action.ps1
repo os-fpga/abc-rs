@@ -1,7 +1,9 @@
 
 Write-Output "abc action script starts "
 
-$OldPATH = $PATH
+Write-Output "Path: $envPATH"
+
+$OldPATH = $env:PATH
 $env:PATH = (Test-Path -Path "C:\cygwin64\bin") ? "C:\cygwin64\bin\" : "C:\cygwin\bin\"
 $env:PATH -split ";"
 $Cygwin = $env:PATH + "bash.exe"
@@ -12,11 +14,14 @@ $arg = "-c"
 & $Cygwin $arg "unix2dos .\*.dsp"
 $env:PATH = $OldPath
 
+
+Write-Output "Path: $envPATH" 
+
 copy .\tmp.dsp .\abclib.dsp
 del .\tmp.dsp
 unix2dos .\*.dsp
 <# executing MsDevShell #>
-./function.ps1
+pwsh.exe -File .\function.ps1 -All
 
 devenv abcspace.dsw /upgrade  ; if (-not $? ) { cat UpgradeLog.htm }
 Write-Output "Build abc..."
