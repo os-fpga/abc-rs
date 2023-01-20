@@ -1,7 +1,7 @@
 
 Write-Output "abc action script starts "
 
-Write-Output "Path: $envPATH"
+Write-Output "Path: $env:PATH"
 
 $OldPATH = $env:PATH
 $env:PATH = (Test-Path -Path "C:\cygwin64\bin") ? "C:\cygwin64\bin\" : "C:\cygwin\bin\"
@@ -15,7 +15,7 @@ $arg = "-c"
 $env:PATH = $OldPath
 
 
-Write-Output "Path: $envPATH" 
+Write-Output "Path: $env:PATH" 
 
 copy .\tmp.dsp .\abclib.dsp
 del .\tmp.dsp
