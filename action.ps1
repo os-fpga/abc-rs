@@ -6,6 +6,7 @@ Write-Output "Path: $env:PATH"
 $OldPATH = $env:PATH
 $env:PATH = (Test-Path -Path "C:\cygwin64\bin") ? "C:\cygwin64\bin\" : "C:\cygwin\bin\"
 $env:PATH -split ";"
+$CygwinBin = $env:PATH
 $Cygwin = $env:PATH + "bash.exe"
 $arg = "-c"
 
@@ -19,7 +20,9 @@ Write-Output "Path: $env:PATH"
 
 copy .\tmp.dsp .\abclib.dsp
 del .\tmp.dsp
-unix2dos .\*.dsp
+$env:PATH = $CygwinBin
+& $Cygwin $arg "unix2dos ./*.dsp"
+$env:PATH = $OldPat
 <# executing MsDevShell #>
 pwsh.exe -File .\function.ps1 -All
 
