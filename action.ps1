@@ -11,7 +11,7 @@ $Cygwin = $env:PATH + "bash.exe"
 $arg = "-c"
 
 & $Cygwin $arg "sed -i 's#ABC_USE_PTHREADS\"#ABC_DONT_USE_PTHREADS\" /D \"_ALLOW_KEYWORD_MACROS=1\"#g' .\*.dsp"
-& $Cygwin $arg "gawk 'BEGIN { del=0; } /# Begin Group "uap"/ { del=1; } /# End Group/ { if( del > 0 ) {del=0; next;} } del==0 {print;} ' .\abclib.dsp > .\tmp.dsp"
+gawk 'BEGIN { del=0; } /# Begin Group "uap"/ { del=1; } /# End Group/ { if( del > 0 ) {del=0; next;} } del==0 {print;} ' .\abclib.dsp > .\tmp.dsp
 & $Cygwin $arg "unix2dos .\*.dsp"
 $env:PATH = $OldPath
 
@@ -23,6 +23,7 @@ del .\tmp.dsp
 $env:PATH = $CygwinBin
 & $Cygwin $arg "unix2dos ./*.dsp"
 $env:PATH = $OldPat
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 <# executing MsDevShell #>
 pwsh.exe -File .\function.ps1 -All
 
