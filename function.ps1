@@ -23,7 +23,7 @@ function MsDevShell {
   
       # Import DevShell.dll and use Enter-VsDevShell.
       Import-Module $devshell
-      Enter-VsDevShell -VsInstanceId $vs.instanceId -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -no_logo'
+      Enter-VsDevShell -VsInstanceId $vs.instanceId -SkipAutomaticLocation -DevCmdArguments '-arch=x86 -no_logo'
   
     } catch {
       # Print exception for debugging.
@@ -43,7 +43,7 @@ function MsDevShell {
       }
   
       # Run VsDevCmd.bat and parse the output into a collection.
-      $cmd = '"{0}" -arch=x64 -no_logo && pwsh -Command "Get-ChildItem env: | Select-Object Name,Value | ConvertTo-Json"' -f $devcmd
+      $cmd = '"{0}" -arch=x86 -no_logo && pwsh -Command "Get-ChildItem env: | Select-Object Name,Value | ConvertTo-Json"' -f $devcmd
       $output = $(& "${env:COMSPEC}" /s /c $cmd)
       if ($LASTEXITCODE -ne 0) {
           throw $output
