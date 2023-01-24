@@ -10,14 +10,14 @@ $CygwinBin = $env:PATH
 $Cygwin = $env:PATH + "bash.exe"
 $arg = "-c"#>
 
-sed -i 's#ABC_USE_PTHREADS\"#ABC_DONT_USE_PTHREADS\" /D \"_ALLOW_KEYWORD_MACROS=1\"#g' .\*.dsp
-gawk 'BEGIN { del=0; } /# Begin Group "uap"/ { del=1; } /# End Group/ { if( del > 0 ) {del=0; next;} } del==0 {print;} ' .\abclib.dsp > .\tmp.dsp
+sed -i 's#ABC_USE_PTHREADS\"#ABC_DONT_USE_PTHREADS\" /D \"_ALLOW_KEYWORD_MACROS=1\"#g' ./*.dsp
+gawk 'BEGIN { del=0; } /# Begin Group "uap"/ { del=1; } /# End Group/ { if( del > 0 ) {del=0; next;} } del==0 {print;} ' ./abclib.dsp > ./tmp.dsp
 
 Write-Output "Path: $env:PATH" 
 
 copy .\tmp.dsp .\abclib.dsp
 del tmp.dsp
-unix2dos .\*.dsp
+unix2dos ./*.dsp
 <# executing MsDevShell #>
 pwsh.exe -File .\function.ps1
 
