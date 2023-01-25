@@ -28,7 +28,7 @@ msbuild abcspace.sln /m /nologo /p:Configuration=Release /p:PlatformTarget=x86
 <# After build we copying abc.exe, abc.rc and pthreadVC2.dll files to Release directory #>
 
 
-if(Test-Path -Path .\..\..\yosys_verific_rs\bin)
+if(Test-Path -Path .\..\..\bin)
 {
 	Write-Output "bin directory already exists"
 }
