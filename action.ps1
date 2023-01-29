@@ -23,7 +23,11 @@ pwsh.exe -File .\function.ps1
 
 devenv abcspace.dsw /upgrade  ; if (-not $? ) { cat UpgradeLog.htm }
 Write-Output "Build abc..."
+
 msbuild abcspace.sln /m /nologo /p:Configuration=Release /p:Platform=x86
+if(-not $?){
+	Throw 'An ERROR occurred while building abc.'
+}
 
 <# After build we copying abc.exe, abc.rc and pthreadVC2.dll files to Release directory #>
 
